@@ -6,7 +6,7 @@
 
 A pure functional Tetris clone written in Haskell using SDL2 for rendering.
 
-<img src="assets/screenshot.png" alt="Haskell Tetris Screenshot" width="350">
+<img src="assets/screenshot.png?v=2" alt="Haskell Tetris Screenshot" width="350">
 
 ## Features
 
