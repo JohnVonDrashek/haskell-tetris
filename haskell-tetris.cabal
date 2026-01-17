@@ -1,0 +1,56 @@
+cabal-version:      3.0
+name:               haskell-tetris
+version:            0.1.0.0
+synopsis:           Classic Tetris clone in Haskell
+description:        A Tetris game using SDL2 for graphics with pure functional game logic
+license:            MIT
+author:             John VonDrashek
+maintainer:         john@example.com
+category:           Game
+build-type:         Simple
+
+common warnings
+    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                 -Wincomplete-uni-patterns -Wmissing-home-modules
+                 -Wpartial-fields -Wredundant-constraints
+
+library
+    import:           warnings
+    exposed-modules:  Tetris.Types
+                    , Tetris.Pieces
+                    , Tetris.Logic
+                    , Tetris.Render
+                    , Tetris.Input
+    build-depends:    base >= 4.14 && < 5
+                    , sdl2 >= 2.5
+                    , vector >= 0.12
+                    , random >= 1.2
+                    , text >= 1.2
+                    , linear >= 1.20
+    hs-source-dirs:   src
+    default-language: Haskell2010
+
+executable haskell-tetris
+    import:           warnings
+    main-is:          Main.hs
+    build-depends:    base >= 4.14 && < 5
+                    , haskell-tetris
+                    , sdl2 >= 2.5
+                    , random >= 1.2
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+
+test-suite haskell-tetris-test
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          Spec.hs
+    other-modules:    LogicSpec
+    build-depends:    base >= 4.14 && < 5
+                    , haskell-tetris
+                    , hspec >= 2.7
+                    , vector >= 0.12
+                    , random >= 1.2
+    hs-source-dirs:   test
+    default-language: Haskell2010
+    ghc-options:      -threaded -rtsopts -with-rtsopts=-N

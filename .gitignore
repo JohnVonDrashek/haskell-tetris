@@ -1,0 +1,26 @@
+# Cabal build artifacts
+dist-newstyle/
+dist/
+cabal.project.local
+cabal.project.local~
+.cabal-sandbox/
+cabal.sandbox.config
+
+# GHC artifacts
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# Editor
+*~
+*.swp
+.vscode/
+.idea/
+
+# OS
+.DS_Store
