@@ -168,30 +168,45 @@ drawNextPiecePreview renderer nextType = do
 drawScoreInfo :: SDL.Renderer -> GameState -> IO ()
 drawScoreInfo renderer gs = do
     let infoX = boardPadding + fromIntegral boardWidth * cellSize + 30
+        labelHeight = 18
+        boxHeight = 40
+        spacing = 8
         scoreY = boardPadding + 180
-        levelY = scoreY + 60
-        linesY = levelY + 60
+        scoreLabelY = scoreY
+        scoreBoxY = scoreY + labelHeight + 2
+        levelY = scoreBoxY + boxHeight + spacing
+        levelLabelY = levelY
+        levelBoxY = levelY + labelHeight + 2
+        linesY = levelBoxY + boxHeight + spacing
+        linesLabelY = linesY
+        linesBoxY = linesY + labelHeight + 2
+
+    -- Draw labels
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 180 180 180 255
+    drawLabel renderer infoX scoreLabelY "SCORE"
+    drawLabel renderer infoX levelLabelY "LEVEL"
+    drawLabel renderer infoX linesLabelY "LINES"
 
     -- Draw info boxes
     SDL.rendererDrawColor renderer SDL.$= SDL.V4 60 60 60 255
 
     -- Score box
-    let scoreRect = SDL.Rectangle (SDL.P (SDL.V2 infoX scoreY)) (SDL.V2 100 50)
+    let scoreRect = SDL.Rectangle (SDL.P (SDL.V2 infoX scoreBoxY)) (SDL.V2 100 boxHeight)
     SDL.fillRect renderer (Just scoreRect)
 
     -- Level box
-    let levelRect = SDL.Rectangle (SDL.P (SDL.V2 infoX levelY)) (SDL.V2 100 50)
+    let levelRect = SDL.Rectangle (SDL.P (SDL.V2 infoX levelBoxY)) (SDL.V2 100 boxHeight)
     SDL.fillRect renderer (Just levelRect)
 
     -- Lines box
-    let linesRect = SDL.Rectangle (SDL.P (SDL.V2 infoX linesY)) (SDL.V2 100 50)
+    let linesRect = SDL.Rectangle (SDL.P (SDL.V2 infoX linesBoxY)) (SDL.V2 100 boxHeight)
     SDL.fillRect renderer (Just linesRect)
 
     -- Draw numeric displays using simple rectangles
     SDL.rendererDrawColor renderer SDL.$= SDL.V4 200 200 200 255
-    drawNumber renderer (infoX + 10) (scoreY + 25) (gsScore gs)
-    drawNumber renderer (infoX + 10) (levelY + 25) (gsLevel gs)
-    drawNumber renderer (infoX + 10) (linesY + 25) (gsLinesCleared gs)
+    drawNumber renderer (infoX + 10) (scoreBoxY + 20) (gsScore gs)
+    drawNumber renderer (infoX + 10) (levelBoxY + 20) (gsLevel gs)
+    drawNumber renderer (infoX + 10) (linesBoxY + 20) (gsLinesCleared gs)
 
 -- | Draw a number using simple block segments (crude but works without fonts)
 drawNumber :: SDL.Renderer -> CInt -> CInt -> Int -> IO ()
@@ -241,6 +256,120 @@ digitSegments =
     , [True, False, True, False, False, True, False]   -- 7
     , [True, True, True, True, True, True, True]       -- 8
     , [True, True, True, True, False, True, True]      -- 9
+    ]
+
+-- | Draw a text label using simple pixel letters
+drawLabel :: SDL.Renderer -> CInt -> CInt -> String -> IO ()
+drawLabel renderer x y label = do
+    let letterWidth = 10
+    mapM_ (\(i, c) -> drawLetter renderer (x + fromIntegral i * letterWidth) y c)
+          (zip [0..] label)
+
+-- | Draw a single letter using a simple 5x7 pixel font
+drawLetter :: SDL.Renderer -> CInt -> CInt -> Char -> IO ()
+drawLetter renderer x y char = do
+    let pattern = letterPattern char
+        pixelSize = 2
+    mapM_ (drawPixel pixelSize) [(px, py) | py <- [0..6], px <- [0..4],
+                                            pattern !! py !! px]
+  where
+    drawPixel size (px, py) = do
+        let rect = SDL.Rectangle
+                (SDL.P (SDL.V2 (x + fromIntegral px * size) (y + fromIntegral py * size)))
+                (SDL.V2 size size)
+        SDL.fillRect renderer (Just rect)
+
+-- | 5x7 pixel patterns for letters (True = filled pixel)
+letterPattern :: Char -> [[Bool]]
+letterPattern 'S' =
+    [ [False, True, True, True, False]
+    , [True, False, False, False, True]
+    , [True, False, False, False, False]
+    , [False, True, True, True, False]
+    , [False, False, False, False, True]
+    , [True, False, False, False, True]
+    , [False, True, True, True, False]
+    ]
+letterPattern 'C' =
+    [ [False, True, True, True, False]
+    , [True, False, False, False, True]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, True]
+    , [False, True, True, True, False]
+    ]
+letterPattern 'O' =
+    [ [False, True, True, True, False]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [False, True, True, True, False]
+    ]
+letterPattern 'R' =
+    [ [True, True, True, True, False]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, True, True, True, False]
+    , [True, False, True, False, False]
+    , [True, False, False, True, False]
+    , [True, False, False, False, True]
+    ]
+letterPattern 'E' =
+    [ [True, True, True, True, True]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, True, True, True, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, True, True, True, True]
+    ]
+letterPattern 'L' =
+    [ [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, False, False, False, False]
+    , [True, True, True, True, True]
+    ]
+letterPattern 'V' =
+    [ [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [True, False, False, False, True]
+    , [False, True, False, True, False]
+    , [False, False, True, False, False]
+    ]
+letterPattern 'I' =
+    [ [True, True, True, True, True]
+    , [False, False, True, False, False]
+    , [False, False, True, False, False]
+    , [False, False, True, False, False]
+    , [False, False, True, False, False]
+    , [False, False, True, False, False]
+    , [True, True, True, True, True]
+    ]
+letterPattern 'N' =
+    [ [True, False, False, False, True]
+    , [True, True, False, False, True]
+    , [True, False, True, False, True]
+    , [True, False, True, False, True]
+    , [True, False, True, False, True]
+    , [True, False, False, True, True]
+    , [True, False, False, False, True]
+    ]
+letterPattern _ =
+    [ [False, False, False, False, False]
+    , [False, False, False, False, False]
+    , [False, False, False, False, False]
+    , [False, False, False, False, False]
+    , [False, False, False, False, False]
+    , [False, False, False, False, False]
+    , [False, False, False, False, False]
     ]
 
 -- | Draw game over overlay
