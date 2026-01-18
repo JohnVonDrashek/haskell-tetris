@@ -43,7 +43,6 @@ initialState rng =
         , gsNextPiece    = nextType
         , gsScore        = 0
         , gsLinesCleared = 0
-        , gsLevel        = 1
         , gsGameOver     = False
         , gsRng          = rng''
         }
@@ -88,25 +87,24 @@ checkCollision piece board =
         | y < 0 = False  -- Allow piece above board
         | otherwise = (board ! y) ! x /= Empty
 
--- | Try to move the piece by delta; return unchanged state if collision
-movePiece :: Position -> GameState -> GameState
-movePiece (dx, dy) gs =
-    let piece = gsCurrentPiece gs
-        (px, py) = piecePosition piece
-        newPiece = piece { piecePosition = (px + dx, py + dy) }
+-- | Helper for attempting piece modifications with collision checking
+tryModifyPiece :: (Piece -> Piece) -> GameState -> GameState
+tryModifyPiece f gs =
+    let newPiece = f (gsCurrentPiece gs)
     in if checkCollision newPiece (gsBoard gs)
        then gs
        else gs { gsCurrentPiece = newPiece }
 
+-- | Try to move the piece by delta; return unchanged state if collision
+movePiece :: Position -> GameState -> GameState
+movePiece (dx, dy) = tryModifyPiece $ \p ->
+    let (px, py) = piecePosition p
+    in p { piecePosition = (px + dx, py + dy) }
+
 -- | Try to rotate the piece; return unchanged state if collision
 rotatePiece :: GameState -> GameState
-rotatePiece gs =
-    let piece = gsCurrentPiece gs
-        newRot = (pieceRotation piece + 1) `mod` 4
-        newPiece = piece { pieceRotation = newRot }
-    in if checkCollision newPiece (gsBoard gs)
-       then gs  -- Simple: no wall kicks
-       else gs { gsCurrentPiece = newPiece }
+rotatePiece = tryModifyPiece $ \p ->
+    p { pieceRotation = (pieceRotation p + 1) `mod` 4 }
 
 -- | Drop piece instantly to bottom
 hardDrop :: GameState -> GameState
@@ -134,7 +132,6 @@ lockAndSpawn gs =
         (clearedBoard, linesCount) = clearLines boardWithPiece
         newScore = gsScore gs + calculateScore linesCount (gsLevel gs)
         newTotalLines = gsLinesCleared gs + linesCount
-        newLevel = 1 + newTotalLines `div` 10  -- Level up every 10 lines
         (nextType, newRng) = randomPieceType (gsRng gs)
         newPiece = Piece (gsNextPiece gs) 0 spawnPosition
         newState = gs
@@ -143,7 +140,6 @@ lockAndSpawn gs =
             , gsNextPiece = nextType
             , gsScore = newScore
             , gsLinesCleared = newTotalLines
-            , gsLevel = newLevel
             , gsRng = newRng
             }
     in if checkCollision newPiece clearedBoard

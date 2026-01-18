@@ -12,32 +12,35 @@ import Tetris.Types
 allPieceTypes :: [PieceType]
 allPieceTypes = [minBound .. maxBound]
 
--- | Get the color for each piece type (standard Tetris colors)
-pieceColor :: PieceType -> Color
-pieceColor I = Color 0   255 255  -- Cyan
-pieceColor O = Color 255 255 0    -- Yellow
-pieceColor T = Color 128 0   128  -- Purple
-pieceColor S = Color 0   255 0    -- Green
-pieceColor Z = Color 255 0   0    -- Red
-pieceColor J = Color 0   0   255  -- Blue
-pieceColor L = Color 255 165 0    -- Orange
-
 -- | Starting position for new pieces (top-center of board)
 spawnPosition :: Position
 spawnPosition = (3, 0)
+
+-- | Consolidated tetromino data: color and 4 rotations
+data TetroData = TetroData
+    { tetroColor  :: Color
+    , tetroShapes :: [[Position]]  -- 4 rotations
+    }
+
+-- | Unified lookup table for all piece properties
+tetroData :: PieceType -> TetroData
+tetroData I = TetroData (Color 0   255 255) iBlocks  -- Cyan
+tetroData O = TetroData (Color 255 255 0  ) oBlocks  -- Yellow
+tetroData T = TetroData (Color 128 0   128) tBlocks  -- Purple
+tetroData S = TetroData (Color 0   255 0  ) sBlocks  -- Green
+tetroData Z = TetroData (Color 255 0   0  ) zBlocks  -- Red
+tetroData J = TetroData (Color 0   0   255) jBlocks  -- Blue
+tetroData L = TetroData (Color 255 165 0  ) lBlocks  -- Orange
+
+-- | Get the color for each piece type
+pieceColor :: PieceType -> Color
+pieceColor = tetroColor . tetroData
 
 -- | Get the block offsets for a piece type and rotation.
 --   Returns list of (dx, dy) offsets from the anchor position.
 --   Rotation is 0-3 for 0, 90, 180, 270 degrees clockwise.
 pieceBlocks :: PieceType -> Rotation -> [Position]
-pieceBlocks pieceT rot = case pieceT of
-    I -> iBlocks !! (rot `mod` 4)
-    O -> oBlocks !! (rot `mod` 4)
-    T -> tBlocks !! (rot `mod` 4)
-    S -> sBlocks !! (rot `mod` 4)
-    Z -> zBlocks !! (rot `mod` 4)
-    J -> jBlocks !! (rot `mod` 4)
-    L -> lBlocks !! (rot `mod` 4)
+pieceBlocks pt rot = tetroShapes (tetroData pt) !! (rot `mod` 4)
 
 -- I-piece: ####
 -- Rotations (4 states, but effectively 2 unique)
