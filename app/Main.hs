@@ -4,6 +4,7 @@ module Main where
 
 import qualified SDL
 import Control.Monad (unless)
+import Data.Maybe (mapMaybe)
 import Data.Word (Word32)
 import System.Random (initStdGen)
 
@@ -43,7 +44,7 @@ gameLoop renderer gameState lastTickTime = do
 
     -- Process SDL events
     events <- SDL.pollEvents
-    let gameEvents = concatMap (maybeToList . sdlEventToGameEvent) events
+    let gameEvents = mapMaybe sdlEventToGameEvent events
         shouldQuit = any isQuitEvent events || gsGameOver gameState
 
     -- Check if it's time for a gravity tick
@@ -67,8 +68,3 @@ gameLoop renderer gameState lastTickTime = do
     -- Continue loop unless quitting
     unless shouldQuit $
         gameLoop renderer newState newTickTime
-
--- | Convert Maybe to list
-maybeToList :: Maybe a -> [a]
-maybeToList Nothing = []
-maybeToList (Just x) = [x]

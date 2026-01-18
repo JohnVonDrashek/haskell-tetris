@@ -30,10 +30,4 @@ keyToEvent keycode = case keycode of
 
 -- | Check if an SDL event is a quit event
 isQuitEvent :: SDL.Event -> Bool
-isQuitEvent event = case SDL.eventPayload event of
-    SDL.QuitEvent -> True
-    SDL.KeyboardEvent keyboardEvent
-        | SDL.keyboardEventKeyMotion keyboardEvent == SDL.Pressed ->
-            let keycode = SDL.keysymKeycode (SDL.keyboardEventKeysym keyboardEvent)
-            in keycode == SDL.KeycodeEscape || keycode == SDL.KeycodeQ
-    _ -> False
+isQuitEvent = maybe False (== Quit) . sdlEventToGameEvent

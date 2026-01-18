@@ -52,6 +52,7 @@ data PieceType
     | L  -- Orange, L-shape
     deriving (Show, Eq, Enum, Bounded)
 
+
 -- | Position on the board (x, y) where (0,0) is top-left
 type Position = (Int, Int)
 

@@ -8,6 +8,7 @@ module Tetris.Render
     ) where
 
 import qualified SDL
+import Control.Monad (when)
 import qualified Data.Vector as V
 import Data.Bits (testBit)
 import Foreign.C.Types (CInt)
@@ -74,23 +75,21 @@ drawBoardBackground renderer = do
     -- Draw grid lines
     SDL.rendererDrawColor renderer SDL.$= SDL.V4 50 50 50 255
     -- Vertical lines
-    mapM_ (drawVerticalLine renderer) [0..boardWidth]
+    mapM_ (drawGridLine renderer Vertical) [0..boardWidth]
     -- Horizontal lines
-    mapM_ (drawHorizontalLine renderer) [0..boardHeight]
+    mapM_ (drawGridLine renderer Horizontal) [0..boardHeight]
 
-drawVerticalLine :: SDL.Renderer -> Int -> IO ()
-drawVerticalLine renderer x = do
-    let x' = boardPadding + fromIntegral x * cellSize
-    SDL.drawLine renderer
-        (SDL.P (SDL.V2 x' boardPadding))
-        (SDL.P (SDL.V2 x' (boardPadding + fromIntegral boardHeight * cellSize)))
+data LineDirection = Vertical | Horizontal
 
-drawHorizontalLine :: SDL.Renderer -> Int -> IO ()
-drawHorizontalLine renderer y = do
-    let y' = boardPadding + fromIntegral y * cellSize
-    SDL.drawLine renderer
-        (SDL.P (SDL.V2 boardPadding y'))
-        (SDL.P (SDL.V2 (boardPadding + fromIntegral boardWidth * cellSize) y'))
+drawGridLine :: SDL.Renderer -> LineDirection -> Int -> IO ()
+drawGridLine renderer dir idx = do
+    let pos = boardPadding + fromIntegral idx * cellSize
+        (p1, p2) = case dir of
+            Vertical   -> (SDL.P (SDL.V2 pos boardPadding),
+                           SDL.P (SDL.V2 pos (boardPadding + fromIntegral boardHeight * cellSize)))
+            Horizontal -> (SDL.P (SDL.V2 boardPadding pos),
+                           SDL.P (SDL.V2 (boardPadding + fromIntegral boardWidth * cellSize) pos))
+    SDL.drawLine renderer p1 p2
 
 -- | Draw filled cells on the board
 drawBoard :: SDL.Renderer -> Board -> IO ()
@@ -212,13 +211,10 @@ drawScoreInfo renderer gs = do
 -- | Draw a number using simple block segments (crude but works without fonts)
 drawNumber :: SDL.Renderer -> CInt -> CInt -> Int -> IO ()
 drawNumber renderer x y n = do
-    let digits = if n == 0 then [0] else toDigits n
+    let digits = map (\c -> fromEnum c - fromEnum '0') $ show n
         digitWidth = 12
     mapM_ (\(i, d) -> drawDigit renderer (x + fromIntegral i * digitWidth) y d)
           (zip [0..] digits)
-  where
-    toDigits 0 = []
-    toDigits num = toDigits (num `div` 10) ++ [num `mod` 10]
 
 -- | Draw a single digit (very simple representation)
 drawDigit :: SDL.Renderer -> CInt -> CInt -> Int -> IO ()
@@ -307,8 +303,3 @@ drawGameOver renderer = do
         textBoxY = boardPadding + fromIntegral boardHeight * cellSize `div` 2 - 20
         textRect = SDL.Rectangle (SDL.P (SDL.V2 textBoxX textBoxY)) (SDL.V2 120 40)
     SDL.fillRect renderer (Just textRect)
-
--- | Helper: when for IO
-when :: Bool -> IO () -> IO ()
-when True action = action
-when False _     = return ()

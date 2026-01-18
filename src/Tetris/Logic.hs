@@ -51,8 +51,8 @@ initialState rng =
 -- | Get a random piece type
 randomPieceType :: StdGen -> (PieceType, StdGen)
 randomPieceType rng =
-    let (idx, rng') = uniformR (0, length allPieceTypes - 1) rng
-    in (allPieceTypes !! idx, rng')
+    let (idx, rng') = uniformR (fromEnum (minBound :: PieceType), fromEnum (maxBound :: PieceType)) rng
+    in (toEnum idx, rng')
 
 -- | Handle a game event, returning new state
 handleEvent :: Event -> GameState -> GameState
@@ -116,11 +116,8 @@ hardDrop gs =
 
 -- | Move piece down until it collides
 dropPiece :: GameState -> GameState
-dropPiece gs =
-    let moved = movePiece (0, 1) gs
-    in if gsCurrentPiece moved == gsCurrentPiece gs
-       then gs  -- Hit bottom
-       else dropPiece moved
+dropPiece = until cannotMoveDown (movePiece (0, 1))
+  where cannotMoveDown gs = gsCurrentPiece (movePiece (0, 1) gs) == gsCurrentPiece gs
 
 -- | Gravity tick: move down or lock piece
 tick :: GameState -> GameState
