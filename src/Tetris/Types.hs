@@ -13,6 +13,7 @@ module Tetris.Types
     , Rotation
       -- * Game state
     , GameState(..)
+    , gsLevel
     , Event(..)
       -- * Colors
     , Color(..)
@@ -83,7 +84,10 @@ data GameState = GameState
     , gsNextPiece    :: !PieceType
     , gsScore        :: !Int
     , gsLinesCleared :: !Int
-    , gsLevel        :: !Int
     , gsGameOver     :: !Bool
     , gsRng          :: !StdGen
     } deriving (Show)
+
+-- | Derived level from lines cleared (level up every 10 lines)
+gsLevel :: GameState -> Int
+gsLevel gs = 1 + gsLinesCleared gs `div` 10

@@ -27,6 +27,13 @@ boardPadding = 20
 previewWidth :: CInt
 previewWidth = 150
 
+-- | Convert board coordinates to screen pixel coordinates (with 1px inset for cell border)
+boardToScreen :: Int -> Int -> (CInt, CInt)
+boardToScreen x y =
+    ( boardPadding + fromIntegral x * cellSize + 1
+    , boardPadding + fromIntegral y * cellSize + 1
+    )
+
 -- | Window dimensions
 windowWidth :: CInt
 windowWidth = boardPadding + fromIntegral boardWidth * cellSize + boardPadding + previewWidth
@@ -103,8 +110,7 @@ drawRow renderer y row =
 drawCell :: SDL.Renderer -> Int -> Int -> Cell -> IO ()
 drawCell _ _ _ Empty = return ()
 drawCell renderer x y (Filled (Color r g b)) = do
-    let screenX = boardPadding + fromIntegral x * cellSize + 1
-        screenY = boardPadding + fromIntegral y * cellSize + 1
+    let (screenX, screenY) = boardToScreen x y
         rect = SDL.Rectangle
             (SDL.P (SDL.V2 screenX screenY))
             (SDL.V2 (cellSize - 2) (cellSize - 2))
@@ -122,8 +128,7 @@ drawPieceBlock :: SDL.Renderer -> Color -> Position -> IO ()
 drawPieceBlock renderer (Color r g b) (x, y)
     | y < 0 = return ()  -- Don't draw blocks above the board
     | otherwise = do
-        let screenX = boardPadding + fromIntegral x * cellSize + 1
-            screenY = boardPadding + fromIntegral y * cellSize + 1
+        let (screenX, screenY) = boardToScreen x y
             rect = SDL.Rectangle
                 (SDL.P (SDL.V2 screenX screenY))
                 (SDL.V2 (cellSize - 2) (cellSize - 2))
