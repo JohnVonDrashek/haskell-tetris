@@ -9,6 +9,7 @@ module Tetris.Render
 
 import qualified SDL
 import qualified Data.Vector as V
+import Data.Bits (testBit)
 import Foreign.C.Types (CInt)
 
 import Tetris.Types
@@ -260,117 +261,35 @@ digitSegments =
 
 -- | Draw a text label using simple pixel letters
 drawLabel :: SDL.Renderer -> CInt -> CInt -> String -> IO ()
-drawLabel renderer x y label = do
-    let letterWidth = 10
-    mapM_ (\(i, c) -> drawLetter renderer (x + fromIntegral i * letterWidth) y c)
-          (zip [0..] label)
+drawLabel renderer x y label =
+    mapM_ (\(i, c) -> drawLetter renderer (x + fromIntegral i * 10) y c) (zip [0..] label)
 
--- | Draw a single letter using a simple 5x7 pixel font
+-- | Draw a single letter using a compact 5x7 pixel font
+-- Each letter is encoded as 7 bytes, one per row, with bits representing pixels
 drawLetter :: SDL.Renderer -> CInt -> CInt -> Char -> IO ()
-drawLetter renderer x y char = do
-    let pattern = letterPattern char
-        pixelSize = 2
-    mapM_ (drawPixel pixelSize) [(px, py) | py <- [0..6], px <- [0..4],
-                                            pattern !! py !! px]
+drawLetter renderer x y char =
+    mapM_ drawPixel [(px, py) | py <- [0..6], px <- [0..4], testBit (rows !! py) (4 - px)]
   where
-    drawPixel size (px, py) = do
-        let rect = SDL.Rectangle
-                (SDL.P (SDL.V2 (x + fromIntegral px * size) (y + fromIntegral py * size)))
-                (SDL.V2 size size)
-        SDL.fillRect renderer (Just rect)
+    rows = letterData char
+    drawPixel (px, py) =
+        let rect = SDL.Rectangle (SDL.P (SDL.V2 (x + fromIntegral px * 2) (y + fromIntegral py * 2))) (SDL.V2 2 2)
+        in SDL.fillRect renderer (Just rect)
 
--- | 5x7 pixel patterns for letters (True = filled pixel)
-letterPattern :: Char -> [[Bool]]
-letterPattern 'S' =
-    [ [False, True, True, True, False]
-    , [True, False, False, False, True]
-    , [True, False, False, False, False]
-    , [False, True, True, True, False]
-    , [False, False, False, False, True]
-    , [True, False, False, False, True]
-    , [False, True, True, True, False]
-    ]
-letterPattern 'C' =
-    [ [False, True, True, True, False]
-    , [True, False, False, False, True]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, True]
-    , [False, True, True, True, False]
-    ]
-letterPattern 'O' =
-    [ [False, True, True, True, False]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [False, True, True, True, False]
-    ]
-letterPattern 'R' =
-    [ [True, True, True, True, False]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, True, True, True, False]
-    , [True, False, True, False, False]
-    , [True, False, False, True, False]
-    , [True, False, False, False, True]
-    ]
-letterPattern 'E' =
-    [ [True, True, True, True, True]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, True, True, True, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, True, True, True, True]
-    ]
-letterPattern 'L' =
-    [ [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, False, False, False, False]
-    , [True, True, True, True, True]
-    ]
-letterPattern 'V' =
-    [ [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [True, False, False, False, True]
-    , [False, True, False, True, False]
-    , [False, False, True, False, False]
-    ]
-letterPattern 'I' =
-    [ [True, True, True, True, True]
-    , [False, False, True, False, False]
-    , [False, False, True, False, False]
-    , [False, False, True, False, False]
-    , [False, False, True, False, False]
-    , [False, False, True, False, False]
-    , [True, True, True, True, True]
-    ]
-letterPattern 'N' =
-    [ [True, False, False, False, True]
-    , [True, True, False, False, True]
-    , [True, False, True, False, True]
-    , [True, False, True, False, True]
-    , [True, False, True, False, True]
-    , [True, False, False, True, True]
-    , [True, False, False, False, True]
-    ]
-letterPattern _ =
-    [ [False, False, False, False, False]
-    , [False, False, False, False, False]
-    , [False, False, False, False, False]
-    , [False, False, False, False, False]
-    , [False, False, False, False, False]
-    , [False, False, False, False, False]
-    , [False, False, False, False, False]
-    ]
+-- | Compact 5x7 bitmap font data (7 bytes per character, MSB = leftmost pixel)
+-- Letters: C E I L N O R S V (used in SCORE, LEVEL, LINES, NEXT)
+letterData :: Char -> [Int]
+letterData 'C' = [0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E]  -- .###. #...# #.... #.... #.... #...# .###.
+letterData 'E' = [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F]  -- ##### #.... #.... ####. #.... #.... #####
+letterData 'I' = [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x1F]  -- ##### ..#.. ..#.. ..#.. ..#.. ..#.. #####
+letterData 'L' = [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F]  -- #.... #.... #.... #.... #.... #.... #####
+letterData 'N' = [0x11, 0x19, 0x15, 0x15, 0x15, 0x13, 0x11]  -- #...# ##..# #.#.# #.#.# #.#.# #..## #...#
+letterData 'O' = [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E]  -- .###. #...# #...# #...# #...# #...# .###.
+letterData 'R' = [0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11]  -- ####. #...# #...# ####. #.#.. #..#. #...#
+letterData 'S' = [0x0E, 0x11, 0x10, 0x0E, 0x01, 0x11, 0x0E]  -- .###. #...# #.... .###. ....# #...# .###.
+letterData 'V' = [0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04]  -- #...# #...# #...# #...# #...# .#.#. ..#..
+letterData 'X' = [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11]  -- #...# #...# .#.#. ..#.. .#.#. #...# #...#
+letterData 'T' = [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04]  -- ##### ..#.. ..#.. ..#.. ..#.. ..#.. ..#..
+letterData _   = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]  -- (blank)
 
 -- | Draw game over overlay
 drawGameOver :: SDL.Renderer -> IO ()
