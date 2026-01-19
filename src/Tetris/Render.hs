@@ -15,7 +15,7 @@ import Foreign.C.Types (CInt)
 
 import Tetris.Types
 import Tetris.Pieces
-import Tetris.Logic (getPieceBlocks)
+import Tetris.Logic (getPieceBlocks, calculateShadowPiece)
 
 -- | Cell size in pixels
 cellSize :: CInt
@@ -55,6 +55,9 @@ render renderer gs = do
 
     -- Draw filled cells on the board
     drawBoard renderer (gsBoard gs)
+
+    -- Draw shadow piece (before current piece so it appears behind)
+    drawShadowPiece renderer (gsCurrentPiece gs) (gsBoard gs)
 
     -- Draw current piece
     drawCurrentPiece renderer (gsCurrentPiece gs)
@@ -135,6 +138,23 @@ drawPieceBlock renderer (Color r g b) (x, y)
         SDL.rendererDrawColor renderer SDL.$= SDL.V4 (fromIntegral r) (fromIntegral g) (fromIntegral b) 255
         SDL.fillRect renderer (Just rect)
 
+-- | Dim a color to ~35% brightness for shadow effect
+dimColor :: Color -> Color
+dimColor (Color r g b) = Color (scale r) (scale g) (scale b)
+  where
+    scale c = floor (fromIntegral c * 0.35 :: Double)
+
+-- | Draw the shadow (ghost) piece showing where current piece would land
+drawShadowPiece :: SDL.Renderer -> Piece -> Board -> IO ()
+drawShadowPiece renderer piece board = do
+    let shadowPiece = calculateShadowPiece piece board
+    -- Only draw if shadow is below current piece
+    when (piecePosition shadowPiece /= piecePosition piece) $ do
+        let color = pieceColor (pieceType piece)
+            dimmedColor = dimColor color
+            blocks = getPieceBlocks shadowPiece
+        mapM_ (drawPieceBlock renderer dimmedColor) blocks
+
 -- | Draw the next piece preview
 drawNextPiecePreview :: SDL.Renderer -> PieceType -> IO ()
 drawNextPiecePreview renderer nextType = do
@@ -150,6 +170,8 @@ drawNextPiecePreview renderer nextType = do
             (SDL.P (SDL.V2 previewX (boardPadding + 20)))
             (SDL.V2 100 30)
     SDL.fillRect renderer (Just labelRect)
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 255 255 255 255
+    drawLabel renderer (previewX + 30) (boardPadding + 28) "NEXT"
 
     -- Draw preview background
     SDL.rendererDrawColor renderer SDL.$= SDL.V4 40 40 40 255

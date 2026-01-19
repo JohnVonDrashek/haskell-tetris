@@ -12,6 +12,7 @@ module Tetris.Logic
       -- * Collision detection
     , checkCollision
     , getPieceBlocks
+    , calculateShadowPiece
       -- * Board operations
     , lockPiece
     , clearLines
@@ -188,3 +189,14 @@ calculateScore lines level = baseScore * level
 -- | Get tick interval in milliseconds based on level
 levelSpeed :: Int -> Int
 levelSpeed level = max 50 (500 - (level - 1) * 50)
+
+-- | Calculate where a piece would land if hard dropped (for shadow rendering)
+calculateShadowPiece :: Piece -> Board -> Piece
+calculateShadowPiece piece board = go piece
+  where
+    go p =
+        let (x, y) = piecePosition p
+            moved = p { piecePosition = (x, y + 1) }
+        in if checkCollision moved board
+           then p  -- Can't move further, return current position
+           else go moved  -- Keep dropping
