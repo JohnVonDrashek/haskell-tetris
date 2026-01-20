@@ -12,6 +12,8 @@ module Tetris.Types
     , Position
     , Rotation
       -- * Game state
+    , GameMode(..)
+    , MenuState(..)
     , GameState(..)
     , gsLevel
     , Event(..)
@@ -76,11 +78,27 @@ data Event
     | HardDrop
     | Tick
     | Quit
+    | MenuUp
+    | MenuDown
+    | MenuSelect
     deriving (Show, Eq)
+
+-- | Game mode - controls which screen is displayed
+data GameMode
+    = MainMenu !MenuState
+    | Playing
+    | GameOver !MenuState
+    deriving (Show, Eq)
+
+-- | Menu state - tracks selection in menu screens
+data MenuState = MenuState
+    { msSelectedIndex :: !Int  -- 0-based index of highlighted menu item
+    } deriving (Show, Eq)
 
 -- | Complete game state
 data GameState = GameState
-    { gsBoard        :: !Board
+    { gsMode         :: !GameMode
+    , gsBoard        :: !Board
     , gsCurrentPiece :: !Piece
     , gsNextPiece    :: !PieceType
     , gsScore        :: !Int

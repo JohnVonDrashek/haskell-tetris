@@ -44,14 +44,15 @@ gameLoop renderer gameState lastTickTime = do
 
     -- Process SDL events
     events <- SDL.pollEvents
-    let gameEvents = mapMaybe sdlEventToGameEvent events
-        shouldQuit = any isQuitEvent events || gsGameOver gameState
+    let mode = gsMode gameState
+        gameEvents = mapMaybe (sdlEventToGameEvent mode) events
+        shouldQuit = any (isQuitEvent mode) events || gsGameOver gameState
 
-    -- Check if it's time for a gravity tick
+    -- Check if it's time for a gravity tick (only during gameplay)
     let tickInterval = fromIntegral (levelSpeed (gsLevel gameState))
         timeSinceLastTick = currentTime - lastTickTime
         (shouldTick, newTickTime) =
-            if timeSinceLastTick >= tickInterval
+            if mode == Playing && timeSinceLastTick >= tickInterval
             then (True, currentTime)
             else (False, lastTickTime)
 

@@ -39,7 +39,8 @@ initialState rng =
         (nextType, rng'')    = randomPieceType rng'
         currentPiece = Piece currentType 0 spawnPosition
     in GameState
-        { gsBoard        = emptyBoard
+        { gsMode         = MainMenu (MenuState 0)
+        , gsBoard        = emptyBoard
         , gsCurrentPiece = currentPiece
         , gsNextPiece    = nextType
         , gsScore        = 0
@@ -56,16 +57,74 @@ randomPieceType rng =
 
 -- | Handle a game event, returning new state
 handleEvent :: Event -> GameState -> GameState
-handleEvent event gs
-    | gsGameOver gs = gs
-    | otherwise = case event of
-        MoveLeft  -> movePiece (-1, 0) gs
-        MoveRight -> movePiece (1, 0) gs
-        MoveDown  -> movePiece (0, 1) gs
-        Rotate    -> rotatePiece gs
-        HardDrop  -> hardDrop gs
-        Tick      -> tick gs
-        Quit      -> gs { gsGameOver = True }
+handleEvent event gs = case gsMode gs of
+    MainMenu menuState -> handleMenuEvent event menuState gs
+    GameOver menuState -> handleMenuEvent event menuState gs
+    Playing
+        | gsGameOver gs -> gs
+        | otherwise -> case event of
+            MoveLeft  -> movePiece (-1, 0) gs
+            MoveRight -> movePiece (1, 0) gs
+            MoveDown  -> movePiece (0, 1) gs
+            Rotate    -> rotatePiece gs
+            HardDrop  -> hardDrop gs
+            Tick      -> tick gs
+            Quit      -> gs { gsMode = GameOver (MenuState 0) }  -- Go to game over menu, don't quit yet
+            _         -> gs
+
+-- | Handle menu navigation and selection events
+handleMenuEvent :: Event -> MenuState -> GameState -> GameState
+handleMenuEvent MenuUp ms gs =
+    let maxIndex = case gsMode gs of
+            MainMenu _ -> 1  -- "Start Game", "Quit"
+            GameOver _ -> 1  -- "Try Again", "Main Menu"
+            _          -> 0
+        newIndex = if msSelectedIndex ms == 0
+                   then maxIndex
+                   else msSelectedIndex ms - 1
+    in gs { gsMode = updateMenuState (ms { msSelectedIndex = newIndex }) (gsMode gs) }
+
+handleMenuEvent MenuDown ms gs =
+    let maxIndex = case gsMode gs of
+            MainMenu _ -> 1
+            GameOver _ -> 1
+            _          -> 0
+        newIndex = if msSelectedIndex ms == maxIndex
+                   then 0
+                   else msSelectedIndex ms + 1
+    in gs { gsMode = updateMenuState (ms { msSelectedIndex = newIndex }) (gsMode gs) }
+
+handleMenuEvent MenuSelect ms gs =
+    case (gsMode gs, msSelectedIndex ms) of
+        (MainMenu _, 0) -> startNewGame gs         -- "Start Game"
+        (MainMenu _, 1) -> gs { gsGameOver = True } -- "Quit"
+        (GameOver _, 0) -> startNewGame gs         -- "Try Again"
+        (GameOver _, 1) -> resetToMainMenu gs      -- "Main Menu"
+        _               -> gs
+
+handleMenuEvent Quit _ gs = case gsMode gs of
+    MainMenu _ -> gs { gsGameOver = True }  -- Quit from main menu
+    GameOver _ -> resetToMainMenu gs        -- Escape from game over goes to main menu
+    _          -> gs
+
+handleMenuEvent _ _ gs = gs
+
+-- | Update menu state within a game mode
+updateMenuState :: MenuState -> GameMode -> GameMode
+updateMenuState ms (MainMenu _) = MainMenu ms
+updateMenuState ms (GameOver _) = GameOver ms
+updateMenuState _ mode = mode
+
+-- | Start a new game, preserving the RNG
+startNewGame :: GameState -> GameState
+startNewGame gs =
+    let rng = gsRng gs
+        newState = initialState rng
+    in newState { gsMode = Playing }
+
+-- | Return to main menu
+resetToMainMenu :: GameState -> GameState
+resetToMainMenu gs = gs { gsMode = MainMenu (MenuState 0), gsGameOver = False }
 
 -- | Get absolute board positions for the current piece
 getPieceBlocks :: Piece -> [Position]
@@ -144,7 +203,7 @@ lockAndSpawn gs =
             , gsRng = newRng
             }
     in if checkCollision newPiece clearedBoard
-       then newState { gsGameOver = True }  -- Can't spawn = game over
+       then newState { gsMode = GameOver (MenuState 0) }  -- Can't spawn = game over (don't quit yet)
        else newState
 
 -- | Bake current piece into the board

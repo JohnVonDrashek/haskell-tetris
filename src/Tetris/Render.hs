@@ -45,33 +45,36 @@ windowHeight = boardPadding + fromIntegral boardHeight * cellSize + boardPadding
 
 -- | Render the entire game state
 render :: SDL.Renderer -> GameState -> IO ()
-render renderer gs = do
-    -- Clear screen with dark background
-    SDL.rendererDrawColor renderer SDL.$= SDL.V4 30 30 30 255
-    SDL.clear renderer
+render renderer gs = case gsMode gs of
+    MainMenu menuState -> do
+        SDL.rendererDrawColor renderer SDL.$= SDL.V4 30 30 30 255
+        SDL.clear renderer
+        renderMainMenu renderer menuState
+        SDL.present renderer
 
-    -- Draw board background
-    drawBoardBackground renderer
+    Playing -> do
+        SDL.rendererDrawColor renderer SDL.$= SDL.V4 30 30 30 255
+        SDL.clear renderer
+        drawBoardBackground renderer
+        drawBoard renderer (gsBoard gs)
+        drawShadowPiece renderer (gsCurrentPiece gs) (gsBoard gs)
+        drawCurrentPiece renderer (gsCurrentPiece gs)
+        drawNextPiecePreview renderer (gsNextPiece gs)
+        drawScoreInfo renderer gs
+        SDL.present renderer
 
-    -- Draw filled cells on the board
-    drawBoard renderer (gsBoard gs)
-
-    -- Draw shadow piece (before current piece so it appears behind)
-    drawShadowPiece renderer (gsCurrentPiece gs) (gsBoard gs)
-
-    -- Draw current piece
-    drawCurrentPiece renderer (gsCurrentPiece gs)
-
-    -- Draw next piece preview
-    drawNextPiecePreview renderer (gsNextPiece gs)
-
-    -- Draw score and level
-    drawScoreInfo renderer gs
-
-    -- Draw game over overlay if needed
-    when (gsGameOver gs) $ drawGameOver renderer
-
-    SDL.present renderer
+    GameOver menuState -> do
+        SDL.rendererDrawColor renderer SDL.$= SDL.V4 30 30 30 255
+        SDL.clear renderer
+        drawBoardBackground renderer
+        drawBoard renderer (gsBoard gs)
+        drawShadowPiece renderer (gsCurrentPiece gs) (gsBoard gs)
+        drawCurrentPiece renderer (gsCurrentPiece gs)
+        drawNextPiecePreview renderer (gsNextPiece gs)
+        drawScoreInfo renderer gs
+        drawGameOver renderer
+        renderGameOverMenu renderer gs menuState
+        SDL.present renderer
 
 -- | Draw the board background grid
 drawBoardBackground :: SDL.Renderer -> IO ()
@@ -299,34 +302,77 @@ drawLetter renderer x y char =
         in SDL.fillRect renderer (Just rect)
 
 -- | Compact 5x7 bitmap font data (7 bytes per character, MSB = leftmost pixel)
--- Letters: C E I L N O R S V (used in SCORE, LEVEL, LINES, NEXT)
 letterData :: Char -> [Int]
+letterData 'A' = [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11]  -- .###. #...# #...# ##### #...# #...# #...#
 letterData 'C' = [0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E]  -- .###. #...# #.... #.... #.... #...# .###.
 letterData 'E' = [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F]  -- ##### #.... #.... ####. #.... #.... #####
+letterData 'G' = [0x0E, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0F]  -- .###. #...# #.... #.### #...# #...# .####
+letterData 'H' = [0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11]  -- #...# #...# #...# ##### #...# #...# #...#
 letterData 'I' = [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x1F]  -- ##### ..#.. ..#.. ..#.. ..#.. ..#.. #####
+letterData 'K' = [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11]  -- #...# #..#. #.#.. ##... #.#.. #..#. #...#
 letterData 'L' = [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F]  -- #.... #.... #.... #.... #.... #.... #####
+letterData 'M' = [0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11]  -- #...# ##.## #.#.# #.#.# #...# #...# #...#
 letterData 'N' = [0x11, 0x19, 0x15, 0x15, 0x15, 0x13, 0x11]  -- #...# ##..# #.#.# #.#.# #.#.# #..## #...#
 letterData 'O' = [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E]  -- .###. #...# #...# #...# #...# #...# .###.
+letterData 'Q' = [0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D]  -- .###. #...# #...# #...# #.#.# #..#. .##.#
 letterData 'R' = [0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11]  -- ####. #...# #...# ####. #.#.. #..#. #...#
 letterData 'S' = [0x0E, 0x11, 0x10, 0x0E, 0x01, 0x11, 0x0E]  -- .###. #...# #.... .###. ....# #...# .###.
+letterData 'T' = [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04]  -- ##### ..#.. ..#.. ..#.. ..#.. ..#.. ..#..
+letterData 'U' = [0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E]  -- #...# #...# #...# #...# #...# #...# .###.
 letterData 'V' = [0x11, 0x11, 0x11, 0x11, 0x11, 0x0A, 0x04]  -- #...# #...# #...# #...# #...# .#.#. ..#..
 letterData 'X' = [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11]  -- #...# #...# .#.#. ..#.. .#.#. #...# #...#
-letterData 'T' = [0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04]  -- ##### ..#.. ..#.. ..#.. ..#.. ..#.. ..#..
-letterData _   = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]  -- (blank)
+letterData 'Y' = [0x11, 0x11, 0x11, 0x0A, 0x04, 0x04, 0x04]  -- #...# #...# #...# .#.#. ..#.. ..#.. ..#..
+letterData '>' = [0x10, 0x08, 0x04, 0x02, 0x04, 0x08, 0x10]  -- #.... .#... ..#.. ...#. ..#.. .#... #....
+letterData _   = [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]  -- (blank/space)
 
 -- | Draw game over overlay
 drawGameOver :: SDL.Renderer -> IO ()
 drawGameOver renderer = do
-    -- Semi-transparent overlay
+    -- Semi-transparent overlay over the game board
     SDL.rendererDrawColor renderer SDL.$= SDL.V4 0 0 0 180
     let overlayRect = SDL.Rectangle
             (SDL.P (SDL.V2 boardPadding boardPadding))
             (SDL.V2 (fromIntegral boardWidth * cellSize) (fromIntegral boardHeight * cellSize))
     SDL.fillRect renderer (Just overlayRect)
+-- | Render the main menu screen
+renderMainMenu :: SDL.Renderer -> MenuState -> IO ()
+renderMainMenu renderer menuState = do
+    let centerX = windowWidth `div` 2
+        titleY = 100
+        menuY = 280
 
-    -- "GAME OVER" text box
-    SDL.rendererDrawColor renderer SDL.$= SDL.V4 200 50 50 255
-    let textBoxX = boardPadding + fromIntegral boardWidth * cellSize `div` 2 - 60
-        textBoxY = boardPadding + fromIntegral boardHeight * cellSize `div` 2 - 20
-        textRect = SDL.Rectangle (SDL.P (SDL.V2 textBoxX textBoxY)) (SDL.V2 120 40)
-    SDL.fillRect renderer (Just textRect)
+    -- Draw title "HASKELL TETRIS"
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 100 180 255 255
+    drawLabel renderer (centerX - 65) titleY "HASKELL"
+    drawLabel renderer (centerX - 35) (titleY + 30) "TETRIS"
+
+    -- Draw menu items
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 200 200 200 255
+    drawMenuItem renderer (centerX - 60) menuY "START GAME" (msSelectedIndex menuState == 0)
+    drawMenuItem renderer (centerX - 25) (menuY + 30) "QUIT" (msSelectedIndex menuState == 1)
+
+-- | Render the game over menu overlay
+renderGameOverMenu :: SDL.Renderer -> GameState -> MenuState -> IO ()
+renderGameOverMenu renderer gs menuState = do
+    let centerX = boardPadding + fromIntegral boardWidth * cellSize `div` 2
+        menuY = boardPadding + fromIntegral boardHeight * cellSize `div` 2 + 40
+
+    -- Draw score
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 255 255 255 255
+    drawLabel renderer (centerX - 40) (menuY - 20) "SCORE"
+    drawNumber renderer (centerX - 20) menuY (gsScore gs)
+
+    -- Draw menu items
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 200 200 200 255
+    drawMenuItem renderer (centerX - 55) (menuY + 40) "TRY AGAIN" (msSelectedIndex menuState == 0)
+    drawMenuItem renderer (centerX - 50) (menuY + 70) "MAIN MENU" (msSelectedIndex menuState == 1)
+
+-- | Draw a menu item with optional selection cursor
+drawMenuItem :: SDL.Renderer -> CInt -> CInt -> String -> Bool -> IO ()
+drawMenuItem renderer x y text selected = do
+    when selected $ do
+        -- Draw selection cursor ">"
+        SDL.rendererDrawColor renderer SDL.$= SDL.V4 255 255 100 255
+        drawLabel renderer (x - 20) y ">"
+    SDL.rendererDrawColor renderer SDL.$= SDL.V4 200 200 200 255
+    drawLabel renderer x y text

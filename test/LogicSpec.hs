@@ -157,6 +157,42 @@ spec = do
         it "has minimum of 50ms" $
             levelSpeed 100 `shouldBe` 50
 
+    describe "Menu event handling" $ do
+        it "MenuUp in GameOver mode cycles selection" $ do
+            let gs = (initialState (mkStdGen 42)) { gsMode = GameOver (MenuState 0) }
+                afterUp = handleEvent MenuUp gs
+            gsMode afterUp `shouldBe` GameOver (MenuState 1)
+
+        it "MenuDown in GameOver mode cycles selection" $ do
+            let gs = (initialState (mkStdGen 42)) { gsMode = GameOver (MenuState 1) }
+                afterDown = handleEvent MenuDown gs
+            gsMode afterDown `shouldBe` GameOver (MenuState 0)
+
+        it "MenuSelect on 'Try Again' starts new game" $ do
+            let gs = (initialState (mkStdGen 42))
+                    { gsMode = GameOver (MenuState 0)
+                    , gsScore = 1000
+                    }
+                afterSelect = handleEvent MenuSelect gs
+            gsMode afterSelect `shouldBe` Playing
+            gsScore afterSelect `shouldBe` 0  -- Score reset
+
+        it "MenuSelect on 'Main Menu' returns to main menu" $ do
+            let gs = (initialState (mkStdGen 42)) { gsMode = GameOver (MenuState 1) }
+                afterSelect = handleEvent MenuSelect gs
+            gsMode afterSelect `shouldBe` MainMenu (MenuState 0)
+
+        it "MenuSelect on 'Quit' from main menu sets gsGameOver" $ do
+            let gs = (initialState (mkStdGen 42)) { gsMode = MainMenu (MenuState 1) }
+                afterSelect = handleEvent MenuSelect gs
+            gsGameOver afterSelect `shouldBe` True
+
+        it "Quit event during gameplay goes to GameOver menu" $ do
+            let gs = (initialState (mkStdGen 42)) { gsMode = Playing }
+                afterQuit = handleEvent Quit gs
+            gsMode afterQuit `shouldBe` GameOver (MenuState 0)
+            gsGameOver afterQuit `shouldBe` False  -- Don't quit, show menu first
+
 -- Helper to set a cell on the board
 setBoardCell :: Board -> Int -> Int -> Cell -> Board
 setBoardCell board x y cell =
