@@ -6,17 +6,20 @@
 
 A pure functional Tetris clone written in Haskell using SDL2 for rendering.
 
-<img src="assets/screenshot.png?v=2" alt="Haskell Tetris Screenshot" width="350">
+<img src="assets/demo.gif" alt="Haskell Tetris Demo" width="400">
 
 ## Features
 
 - Classic Tetris gameplay on a 10x20 board
+- Main menu and game over screen with keyboard navigation
 - Clean separation between pure game logic and I/O (rendering/input)
 - Time-based gravity system with increasing speed per level
 - Next piece preview panel
-- Custom seven-segment display rendering for score, level, and lines
+- Shadow piece showing landing position
+- Custom bitmap font rendering for all text
+- Custom seven-segment display for score, level, and lines
 - All 7 standard Tetromino pieces with rotation
-- Comprehensive test suite (31 tests)
+- Comprehensive test suite (37 tests)
 
 ## Why Haskell?
 
@@ -67,6 +70,7 @@ cabal test
 
 ## Controls
 
+### During Gameplay
 | Key | Action |
 |-----|--------|
 | Left Arrow | Move piece left |
@@ -74,7 +78,14 @@ cabal test
 | Down Arrow | Soft drop |
 | Up Arrow | Rotate piece |
 | Space | Hard drop |
-| Escape / Q | Quit game |
+| Escape / Q | Pause and show game over menu |
+
+### In Menus
+| Key | Action |
+|-----|--------|
+| Up / Down Arrow | Navigate menu options |
+| Enter | Select menu option |
+| Escape | Back to main menu (from game over) |
 
 ## Project Structure
 
